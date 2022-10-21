@@ -1,0 +1,49 @@
+from sklearn.ensemble import AdaBoostClassifier
+from sklearn.tree import DecisionTreeClassifier
+#from sklearn.inspection import DecisionBoundaryDisplay
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+
+# First set up the BDT
+bdt = AdaBoostClassifier(
+    DecisionTreeClassifier(max_depth=5), algorithm="SAMME", n_estimators=200
+)
+# The max depth and number of estimators are two hyperparameters that can be tuned for optimal performance
+
+signals = pd.read_csv("signal.csv")
+kmumu = pd.read_csv("Kmumu.csv")
+whole = pd.read_csv("total_dataset.csv")
+
+
+
+sig_frame =np.column_stack((signals['B0_M'][:10000]**2, signals['Kstar_M'][:10000]**2))
+bkg_frame =np.column_stack((kmumu['B0_M'][:10000]**2, kmumu['Kstar_M'][:10000]**2))
+X_train = np.concatenate([sig_frame, bkg_frame])
+Y_train = np.concatenate([np.ones(10000), np.zeros(10000)])
+
+who_frame =np.column_stack([whole['B0_M'][:10000]**2, whole['Kstar_M'][:10000]**2])
+X_test = np.concatenate([who_frame, who_frame])
+Y_test = np.concatenate([np.ones(10000), np.zeros(10000)])
+
+bdt.fit(X_train,Y_train)
+bdt_score = bdt.predict_proba(X_test)
+
+plt.hist(bdt_score[Y_test==1][:,1], color = 'blue', alpha= 0.4, label='signal');
+plt.hist(bdt_score[Y_test==0][:,1], color = 'red', alpha= 0.4, label = 'background');
+plt.legend();
+plt.xlabel('BDT output');
+
+
+
+plt.figure()
+ax = plt.gca()
+disp = DecisionBoundaryDisplay.from_estimator(
+    bdt,
+    X_test,
+    cmap=plt.cm.Paired,
+    response_method="predict",
+    ax=ax,
+    xlabel="x",
+    ylabel="y",
+)
